@@ -1,4 +1,4 @@
-# HorizonRS
+# horizonRS
 
 ## Overview
 Using numeric analysis to gain an edge in *Old School Runescape's* (OSRS) **Grand Exchange**.
