@@ -1,0 +1,29 @@
+name: Sync to Databricks Repo
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync-repo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout GitHub Repo
+        uses: actions/checkout@v3
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@main
+
+      - name: Configure Databricks CLI
+        run: |
+          databricks configure --host "$DATABRICKS_HOST" --token "$DATABRICKS_TOKEN"
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+      - name: Sync GitHub repo to Databricks Repo
+        run: |
+          databricks repos update "/Workspace/Users/zudsgaming@gmail.com/horizonRS" --branch main || \
+          databricks repos create https://github.com/jzuds/horizonRS.git gitHub --path "/Workspace/Users/zudsgaming@gmail.com/horizonRS"
