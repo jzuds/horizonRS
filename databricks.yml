@@ -1,0 +1,39 @@
+bundle:
+  name: osrs-ge-pipeline
+
+include:
+  - resources/jobs/*.yml
+
+variables:
+  warehouse_name:
+    description: Name of the SQL warehouse to use for maintenance tasks
+    default: Serverless Starter Warehouse
+
+  warehouse_id:
+    description: Resolved at deploy time from warehouse name
+    lookup:
+      warehouse: ${var.warehouse_name}
+
+  notification_email:
+    description: Alert recipient for job failures
+    default: zudsgaming@gmail.com
+
+  schedule_pause_status:
+    description: PAUSED in dev, UNPAUSED in prod
+    default: PAUSED
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-197944cb-fe6f.cloud.databricks.com
+      root_path: ~/.bundle/${bundle.name}/${bundle.target}
+
+  prod:
+    mode: production
+    workspace:
+      host: https://dbc-197944cb-fe6f.cloud.databricks.com
+      root_path: /Shared/bundles/${bundle.name}
+    variables:
+      schedule_pause_status: UNPAUSED

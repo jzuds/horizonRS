@@ -1,0 +1,31 @@
+resources:
+  jobs:
+    price_history:
+      name: price_history_test
+
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+        no_alert_for_skipped_runs: true
+
+      schedule:
+        quartz_cron_expression: "48 0 1 * * ?"
+        timezone_id: America/New_York
+        pause_status: ${var.schedule_pause_status}
+
+      queue:
+        enabled: true
+
+      performance_target: PERFORMANCE_OPTIMIZED
+
+      environments:
+        - environment_key: Default
+          spec:
+            client: "3"
+
+      tasks:
+
+        - task_key: bronze_ge_price_data_5m
+          spark_python_task:
+            python_file: ./src/extraction/ge_price_data_5m.py
+          environment_key: Default
