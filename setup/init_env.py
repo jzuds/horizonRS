@@ -16,7 +16,7 @@ if not warehouse:
 
 print(f"Using warehouse: {warehouse.name} ({warehouse.id})")
 
-sql_dir = Path(__file__).parent / "sql"
+sql_dir = Path(__file__).parent
 
 def run_sql(statement: str):
     statement = statement.strip()
