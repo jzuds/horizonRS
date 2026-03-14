@@ -11,9 +11,11 @@ jobs:
   validate:
     name: Validate bundle
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v0
+
       - name: Validate
         run: databricks bundle validate
         env:
@@ -21,34 +23,38 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
   setup-catalog:
-      name: Init catalogs, schemas and volumes
-      runs-on: ubuntu-latest
-      needs: validate
-      steps:
-        - uses: actions/checkout@v4
+    name: Init catalogs, schemas and volumes
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
 
-        - name: Set up Python
-          uses: actions/setup-python@v5
-          with:
-            python-version: '3.11'
+    steps:
+      - uses: actions/checkout@v4
 
-        - name: Install Databricks SDK
-          run: pip install databricks-sdk
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
 
-        - name: Run env setup
-          run: python setup/init_env.py
-          env:
-            DATABRICKS_HOST:        ${{ secrets.DATABRICKS_HOST }}
-            DATABRICKS_TOKEN:       ${{ secrets.DATABRICKS_TOKEN }}
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run environment setup
+        run: python setup/init_env.py
+        env:
+          DATABRICKS_HOST:  ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
   deploy-dev:
     name: Deploy to dev
     runs-on: ubuntu-latest
-    needs: validate
+    needs: setup-catalog
     if: github.ref != 'refs/heads/main'
+
     steps:
       - uses: actions/checkout@v4
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v0
+
       - name: Deploy
         run: databricks bundle deploy -t dev --auto-approve
         env:
@@ -58,11 +64,13 @@ jobs:
   deploy-prod:
     name: Deploy to prod
     runs-on: ubuntu-latest
-    needs: validate
+    needs: setup-catalog
     if: github.ref == 'refs/heads/main'
+
     steps:
       - uses: actions/checkout@v4
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v0
+
       - name: Deploy
         run: databricks bundle deploy -t prod --auto-approve
         env:
