@@ -27,5 +27,5 @@ resources:
 
         - task_key: bronze_ge_price_data_5m
           spark_python_task:
-            python_file: ./src/extraction/ge_price_data_5m.py
+            python_file: ${workspace.file_path}/src/extraction/ge_price_data_5m.py
           environment_key: Default
