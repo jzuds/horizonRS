@@ -20,6 +20,22 @@ jobs:
           DATABRICKS_HOST:  ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
+  setup-catalog:
+    name: Init catalogs, schemas and volumes
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: databricks/setup-cli@main
+      - name: Run catalog setup
+        run: |
+          databricks sql execute \
+            --warehouse-id ${{ secrets.DATABRICKS_WAREHOUSE_ID }} \
+            --file setup/init.sql
+        env:
+          DATABRICKS_HOST:  ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
   deploy-dev:
     name: Deploy to dev
     runs-on: ubuntu-latest

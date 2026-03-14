@@ -22,6 +22,10 @@ variables:
     description: PAUSED in dev, UNPAUSED in prod
     default: PAUSED
 
+  catalog:
+    description: Catalog to use
+    default: osrs_analytics_dev
+
 targets:
   dev:
     mode: development
@@ -29,6 +33,9 @@ targets:
     workspace:
       host: https://dbc-197944cb-fe6f.cloud.databricks.com
       root_path: ~/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      schedule_pause_status: PAUSED
+      catalog: osrs_analytics_dev
 
   prod:
     mode: production
@@ -37,3 +44,4 @@ targets:
       root_path: /Shared/bundles/${bundle.name}
     variables:
       schedule_pause_status: UNPAUSED
+      catalog: osrs_analytics_prod

@@ -1,7 +1,7 @@
 resources:
   jobs:
     price_history:
-      name: price_history_test
+      name: load_price_history
 
       email_notifications:
         on_failure:
@@ -25,7 +25,10 @@ resources:
 
       tasks:
 
-        - task_key: bronze_ge_price_data_5m
+        - task_key: ge_price_data_5m
           spark_python_task:
             python_file: ${workspace.file_path}/src/extract/ge_price_data_5m.py
+            parameters:
+              - "--catalog"
+              - "${var.catalog}"
           environment_key: Default
