@@ -9,27 +9,26 @@ resources:
         no_alert_for_skipped_runs: true
 
       schedule:
-        quartz_cron_expression: "0 0 6 * * ?"
-        timezone_id: UTC
+        quartz_cron_expression: "48 0 1 * * ?"
+        timezone_id: America/New_York
         pause_status: ${var.schedule_pause_status}
 
       queue:
         enabled: true
 
-      tasks:
-        - task_key: ge_price_data_24h
-          spark_python_task:
-            python_file: ${workspace.file_path}/src/extract/ge_price_data_24h.py
-            python_path:
-              - ${workspace.file_path}
-            parameters:
-              - "--landing-root"
-              - "/Volumes/${var.catalog}/raw/landing/ge_price_24h"
-          environment_key: Default
+      performance_target: PERFORMANCE_OPTIMIZED
 
       environments:
         - environment_key: Default
           spec:
             client: "3"
-            dependencies:
-              - requests
+
+      tasks:
+
+        - task_key: ge_price_data_5m
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/extract/ge_price_data_5m.py
+            parameters:
+              - "--catalog"
+              - "${var.catalog}"
+          environment_key: Default
