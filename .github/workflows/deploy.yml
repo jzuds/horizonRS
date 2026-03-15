@@ -1,0 +1,78 @@
+name: Deploy OSRS GE Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - 'feature/**'
+
+jobs:
+  validate:
+    name: Validate bundle
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: databricks/setup-cli@main
+
+      - name: Validate
+        run: databricks bundle validate
+        env:
+          DATABRICKS_HOST:  ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+  setup-catalog:
+    name: Init catalogs, schemas and volumes
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r setup/requirements.txt
+
+      - name: Run environment setup
+        run: python setup/init_env.py
+        env:
+          DATABRICKS_HOST:  ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+  deploy-dev:
+    name: Deploy to dev
+    runs-on: ubuntu-latest
+    needs: setup-catalog
+    if: github.ref != 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: databricks/setup-cli@main
+
+      - name: Deploy
+        run: databricks bundle deploy -t dev --auto-approve
+        env:
+          DATABRICKS_HOST:  ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+  deploy-prod:
+    name: Deploy to prod
+    runs-on: ubuntu-latest
+    needs: setup-catalog
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: databricks/setup-cli@main
+
+      - name: Deploy
+        run: databricks bundle deploy -t prod --auto-approve
+        env:
+          DATABRICKS_HOST:  ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
