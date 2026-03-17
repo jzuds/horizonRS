@@ -112,3 +112,5 @@ Thumbs.db
 
 # Development
 tinkering/
+uv.lock
+output/

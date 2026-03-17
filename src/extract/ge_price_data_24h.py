@@ -31,7 +31,8 @@ def fetch_24h(session, snapshot_ts: datetime) -> dict:
 
 
 def landing_path(landing_root: str, ingestion_date: date, snapshot_ts: datetime) -> Path:
-    return Path(landing_root) / f"ingestion_date={ingestion_date.isoformat()}" / f"snapshot_ts={snapshot_ts.isoformat()}.json"
+    ts_str = snapshot_ts.strftime("%Y-%m-%dT%H%M%SZ")
+    return Path(landing_root) / f"ingestion_date={ingestion_date.isoformat()}" / f"snapshot_ts={ts_str}.json"
 
 
 def write_landing(payload: dict, landing_root: str, ingestion_date: date, snapshot_ts: datetime) -> Path:
