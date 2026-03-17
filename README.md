@@ -6,6 +6,14 @@ Using numeric analysis to gain an edge in *Old School Runescape's* (OSRS) **Gran
 ## The problem
 The OSRS Grand Exchange is a living, breathing ecosystem with fast-paced and dynamic trends. As a result, "merchers" have an excellent opportunity to financially capatilize on these evolving market conditions.
 
+## Local Development
+```
+uv sync
+source .venv/bin/activate
+
+python src/extract/ge_price_data_24h.py --landing-root ./output/ge_price_24h
+```
+
 ## Contributing
 - How to add new items or pipelines
 
