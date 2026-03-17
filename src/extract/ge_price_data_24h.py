@@ -2,7 +2,6 @@ import argparse
 import json
 import logging
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
 
 import sys
 from pathlib import Path
@@ -82,7 +81,8 @@ def main() -> None:
     session = build_session()
     payload = fetch_24h(session, snapshot_ts)
 
-    write_landing(payload, args.landing_root, date.today(), snapshot_ts)
+    ingestion_date = datetime.now(timezone.utc).date()
+    write_landing(payload, args.landing_root, ingestion_date, snapshot_ts)
 
 
 if __name__ == "__main__":
