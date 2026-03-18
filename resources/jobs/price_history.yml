@@ -27,9 +27,25 @@ resources:
               - "/Volumes/${var.catalog}/raw/landing/ge_price_24h"
           environment_key: Default
 
+        - task_key: ge_price_process_24h
+          depends_on:
+            - task_key: ge_price_data_24h
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/process/process_ge_price_data_24h.py
+            python_path:
+              - ${workspace.file_path}
+            parameters:
+              - "--src-dir"
+              - "/Volumes/${var.catalog}/raw/landing/ge_price_24h/ingestion_date={{job.start_time.iso_date}}"
+              - "--dest"
+              - "/Volumes/${var.catalog}/raw/processed/ge_price_24h"
+          environment_key: Default
+
       environments:
         - environment_key: Default
           spec:
             client: "3"
             dependencies:
               - requests
+              - pandas
+              - pyarrow
