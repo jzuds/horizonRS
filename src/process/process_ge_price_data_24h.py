@@ -21,7 +21,28 @@ PARQUET_SCHEMA = pa.schema(
     ]
 )
 
+_PARQUET_WRITE_OPTIONS = dict(
+    compression="zstd",
+    compression_level=3,
+    write_statistics=True,
+    use_dictionary=False,
+)
+
 _INGESTION_DATE_RE = re.compile(r"ingestion_date=(\d{4}-\d{2}-\d{2})")
+
+
+def _safe_int(v, default=None):
+    if v is None:
+        return default
+    if isinstance(v, str):
+        v = v.strip()
+        if v == "":
+            return default
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
 
 def _parse_ingestion_date(src_dir: Path) -> str:
     """Extract ingestion_date from the partition directory name."""
@@ -31,6 +52,7 @@ def _parse_ingestion_date(src_dir: Path) -> str:
             f"Expected directory name to contain 'ingestion_date=YYYY-MM-DD', got: {src_dir}"
         )
     return match.group(1)
+
 
 def _flatten(src: Path, ingestion_date: str) -> pd.DataFrame:
     """Flatten a single JSON snapshot into a DataFrame."""
@@ -46,10 +68,10 @@ def _flatten(src: Path, ingestion_date: str) -> pd.DataFrame:
     rows = [
         {
             "item_id": int(item_id_str),
-            "avg_high_price": prices.get("avgHighPrice"),
-            "high_price_volume": prices.get("highPriceVolume", 0),
-            "avg_low_price": prices.get("avgLowPrice"),
-            "low_price_volume": prices.get("lowPriceVolume", 0),
+            "avg_high_price": _safe_int(prices.get("avgHighPrice")),
+            "high_price_volume": _safe_int(prices.get("highPriceVolume"), 0),
+            "avg_low_price": _safe_int(prices.get("avgLowPrice")),
+            "low_price_volume": _safe_int(prices.get("lowPriceVolume"), 0),
             "snapshot_ts": snapshot_ts,
             "snapshot_date": snapshot_ts.date(),
             "ingestion_date": ingestion_date,
@@ -58,13 +80,17 @@ def _flatten(src: Path, ingestion_date: str) -> pd.DataFrame:
     ]
 
     df = pd.DataFrame(rows)
-    df["avg_high_price"] = df["avg_high_price"].astype("Int64")
-    df["avg_low_price"] = df["avg_low_price"].astype("Int64")
-    df["high_price_volume"] = df["high_price_volume"].astype("int64")
-    df["low_price_volume"] = df["low_price_volume"].astype("int64")
-    df["snapshot_date"] = pd.to_datetime(df["snapshot_date"]).dt.date
-    df["ingestion_date"] = pd.to_datetime(df["ingestion_date"]).dt.date
+
+    if not df.empty:
+        df["avg_high_price"] = df["avg_high_price"].astype("Int64")
+        df["avg_low_price"] = df["avg_low_price"].astype("Int64")
+        df["high_price_volume"] = df["high_price_volume"].astype("int64")
+        df["low_price_volume"] = df["low_price_volume"].astype("int64")
+        df["snapshot_date"] = pd.to_datetime(df["snapshot_date"]).dt.date
+        df["ingestion_date"] = pd.to_datetime(df["ingestion_date"]).dt.date 
+
     return df
+
 
 def transform_partition(src_dir: Path, dest: Path) -> list[Path]:
     """
@@ -81,24 +107,37 @@ def transform_partition(src_dir: Path, dest: Path) -> list[Path]:
     written = []
     for src in json_files:
         df = _flatten(src, ingestion_date)
+
+        if df.empty:
+            print(f"[skip] {src.name} produced 0 rows")
+            continue
+
         snapshot_date = df["snapshot_date"].iloc[0]
 
         out_dir = dest / f"snapshot_date={snapshot_date}"
         out_dir.mkdir(parents=True, exist_ok=True)
 
         out_path = out_dir / f"{ingestion_date}.parquet"
+
         pq.write_table(
             pa.Table.from_pandas(df, schema=PARQUET_SCHEMA, preserve_index=False),
             out_path,
-            compression="snappy",
+            **_PARQUET_WRITE_OPTIONS,
         )
-        print(f"[transform] {src.name} -> {out_path}  ({len(df):,} rows)")
+
+        print(
+            f"[transform] {src.name} -> {out_path} "
+            f"rows={len(df):,}"
+        )
         written.append(out_path)
 
     return written
 
+
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="GE price transform: JSON partition -> Parquet")
+    parser = argparse.ArgumentParser(
+        description="GE price transform: JSON partition -> Parquet"
+    )
     parser.add_argument(
         "--src-dir",
         required=True,
@@ -112,6 +151,7 @@ def _parse_args() -> argparse.Namespace:
         help="Root of transformed output directory",
     )
     return parser.parse_args()
+
 
 if __name__ == "__main__":
     args = _parse_args()

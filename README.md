@@ -17,6 +17,9 @@ python src/extract/ge_price_data_24h.py \
 python src/process/process_ge_price_data_24h.py \
     --src-dir ./output/ge_price_24h/ingestion_date=2026-03-17 \
     --dest ./output/ge_price_24h_process
+
+python src/utility/inspect_pq_file.py \
+    --file ./output/ge_price_24h_process/snapshot_date=2026-03-16/2026-03-17.parquet
 ```
 
 ## Contributing
