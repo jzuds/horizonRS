@@ -41,6 +41,22 @@ resources:
               - "/Volumes/${var.catalog}/raw/processed/ge_price_24h"
           environment_key: Default
 
+        - task_key: ge_price_analytics_24h
+          depends_on:
+            - task_key: ge_price_process_24h
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/process/compute_ge_price_analytics.py
+            python_path:
+              - ${workspace.file_path}
+            parameters:
+              - "--src-root"
+              - "/Volumes/${var.catalog}/raw/processed/ge_price_24h"
+              - "--dest"
+              - "/Volumes/${var.catalog}/raw/processed/ge_price_24h_analytics"
+              - "--lookback-days"
+              - "1"
+          environment_key: Default
+
       environments:
         - environment_key: Default
           spec:
