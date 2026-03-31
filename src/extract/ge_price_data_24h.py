@@ -60,7 +60,7 @@ def parse_args() -> argparse.Namespace:
 def resolve_date(date_str: str | None) -> date:
     if date_str:
         return date.fromisoformat(date_str)
-    return date.today() - timedelta(days=1)
+    return datetime.now(timezone.utc).date() - timedelta(days=1)
 
 
 def main() -> None:
