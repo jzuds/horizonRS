@@ -54,7 +54,7 @@ resources:
               - "--dest"
               - "/Volumes/${var.catalog}/raw/processed/ge_price_24h_analytics"
               - "--lookback-days"
-              - "1"
+              - "7"
           environment_key: Default
 
       environments:

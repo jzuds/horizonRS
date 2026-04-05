@@ -29,19 +29,18 @@ ITEM_HISTORY_SCHEMA = pa.schema(
     ]
 )
 
-DAILY_TOP_CHANGES_SCHEMA = pa.schema(
+MA7_SCHEMA = pa.schema(
     [
         pa.field("item_id", pa.int32()),
         pa.field("snapshot_date", pa.date32()),
-        pa.field("current_avg_high_price", pa.int64(), nullable=True),
-        pa.field("current_avg_low_price", pa.int64(), nullable=True),
-        pa.field("previous_snapshot_date", pa.date32(), nullable=True),
-        pa.field("previous_avg_high_price", pa.int64(), nullable=True),
-        pa.field("previous_avg_low_price", pa.int64(), nullable=True),
-        pa.field("avg_high_price_change", pa.int64(), nullable=True),
-        pa.field("avg_low_price_change", pa.int64(), nullable=True),
-        pa.field("avg_high_price_change_pct", pa.float64(), nullable=True),
-        pa.field("avg_low_price_change_pct", pa.float64(), nullable=True),
+        pa.field("ma7_avg_high_price", pa.float64(), nullable=True),
+        pa.field("ma7_avg_low_price", pa.float64(), nullable=True),
+        pa.field("high_price_history", pa.list_(pa.float64()), nullable=True),
+        pa.field("low_price_history", pa.list_(pa.float64()), nullable=True),
+        pa.field("valid_days_high", pa.int32()),
+        pa.field("valid_days_low", pa.int32()),
+        pa.field("window_start_date", pa.date32(), nullable=True),
+        pa.field("window_end_date", pa.date32()),
     ]
 )
 
@@ -180,68 +179,62 @@ def _build_item_history_df(df: pd.DataFrame) -> pd.DataFrame:
     ].copy()
 
 
-def _build_daily_top_changes_df(
-    current: pd.DataFrame,
-    previous: pd.DataFrame | None,
-    previous_snapshot_date: date | None,
-) -> pd.DataFrame:
-    if previous is None or previous.empty:
-        return pd.DataFrame(columns=DAILY_TOP_CHANGES_SCHEMA.names)
+def _build_ma7_df(
+    snapshot_date: date,
+    src_root: Path,
+    window_days: int = 7,
+) -> tuple[pd.DataFrame, list[Path]]:
+    frames: list[pd.DataFrame] = []
+    source_files: list[Path] = []
 
-    current = current[
-        ["item_id", "snapshot_date", "avg_high_price", "avg_low_price"]
-    ].rename(
-        columns={
-            "avg_high_price": "current_avg_high_price",
-            "avg_low_price": "current_avg_low_price",
-        }
+    for offset in range(window_days):
+        window_date = snapshot_date - timedelta(days=offset)
+        partition_dir = src_root / f"snapshot_date={window_date.isoformat()}"
+        if not partition_dir.exists():
+            continue
+
+        try:
+            source_file = _latest_snapshot_file(partition_dir)
+            window_df = pd.read_parquet(source_file)
+            window_df = _normalize_snapshot_df(window_df, window_date)
+            frames.append(window_df[["item_id", "avg_high_price", "avg_low_price", "snapshot_date"]])
+            source_files.append(source_file)
+        except FileNotFoundError:
+            continue
+
+    if not frames:
+        return pd.DataFrame(columns=MA7_SCHEMA.names), source_files
+
+    combined = pd.concat(frames, ignore_index=True)
+    window_dates = [snapshot_date - timedelta(days=offset) for offset in range(window_days - 1, -1, -1)]
+    date_to_position = {dt: pos for pos, dt in enumerate(window_dates)}
+    combined["window_position"] = combined["snapshot_date"].map(date_to_position)
+
+    all_item_ids = combined["item_id"].unique()
+    all_index = pd.MultiIndex.from_product([all_item_ids, list(range(window_days))], names=["item_id", "window_position"])
+    combined = combined.set_index(["item_id", "window_position"]).reindex(all_index)
+
+    def make_window_list(values: pd.Series) -> list:
+        return [None if pd.isna(v) else float(v) for v in values.tolist()]
+
+    window_data = combined.groupby(level="item_id").agg(
+        ma7_avg_high_price=("avg_high_price", "mean"),
+        ma7_avg_low_price=("avg_low_price", "mean"),
+        valid_days_high=("avg_high_price", lambda x: int(x.notna().sum())),
+        valid_days_low=("avg_low_price", lambda x: int(x.notna().sum())),
     )
-    previous = previous[
-        ["item_id", "avg_high_price", "avg_low_price"]
-    ].rename(
-        columns={
-            "avg_high_price": "previous_avg_high_price",
-            "avg_low_price": "previous_avg_low_price",
-        }
-    )
 
-    merged = current.merge(previous, on="item_id", how="left")
-    merged["previous_snapshot_date"] = previous_snapshot_date
+    high_history = combined["avg_high_price"].groupby(level="item_id").apply(make_window_list)
+    low_history = combined["avg_low_price"].groupby(level="item_id").apply(make_window_list)
 
-    merged["avg_high_price_change"] = merged["current_avg_high_price"] - merged["previous_avg_high_price"]
-    merged["avg_low_price_change"] = merged["current_avg_low_price"] - merged["previous_avg_low_price"]
+    aggregated = window_data.reset_index()
+    aggregated["high_price_history"] = aggregated["item_id"].map(high_history)
+    aggregated["low_price_history"] = aggregated["item_id"].map(low_history)
+    aggregated["snapshot_date"] = snapshot_date
+    aggregated["window_start_date"] = snapshot_date - timedelta(days=window_days - 1)
+    aggregated["window_end_date"] = snapshot_date
 
-    def pct_change(current, previous):
-        if pd.isna(current) or pd.isna(previous) or previous == 0:
-            return pd.NA
-        return (current - previous) / float(previous)
-
-    merged["avg_high_price_change_pct"] = merged.apply(
-        lambda row: pct_change(row["current_avg_high_price"], row["previous_avg_high_price"]),
-        axis=1,
-    )
-    merged["avg_low_price_change_pct"] = merged.apply(
-        lambda row: pct_change(row["current_avg_low_price"], row["previous_avg_low_price"]),
-        axis=1,
-    )
-
-    merged = merged[
-        [
-            "item_id",
-            "snapshot_date",
-            "current_avg_high_price",
-            "current_avg_low_price",
-            "previous_snapshot_date",
-            "previous_avg_high_price",
-            "previous_avg_low_price",
-            "avg_high_price_change",
-            "avg_low_price_change",
-            "avg_high_price_change_pct",
-            "avg_low_price_change_pct",
-        ]
-    ]
-
-    return merged
+    return aggregated, source_files
 
 
 def _prepare_table(df: pd.DataFrame, schema: pa.Schema) -> pd.DataFrame:
@@ -281,7 +274,7 @@ def _publish_snapshot(
     snapshot_date: date,
     src_root: Path,
     dest_root: Path,
-    lookback_days: int,
+    window_days: int,
     force: bool = False,
 ) -> None:
     logger.info("Processing snapshot_date=%s", snapshot_date)
@@ -309,48 +302,32 @@ def _publish_snapshot(
             _write_parquet(item_history_df, ITEM_HISTORY_SCHEMA, item_history_path)
             _write_metadata(item_history_meta, current_metadata)
 
-    lookback_date = snapshot_date - timedelta(days=lookback_days)
-    previous_dir = src_root / f"snapshot_date={lookback_date.isoformat()}"
-    previous_df = None
-    previous_fingerprint = None
-    previous_snapshot_date = None
+    ma7_dir = dest_root / "daily_top_changes" / f"snapshot_date={snapshot_date.isoformat()}"
+    ma7_path = ma7_dir / f"{snapshot_date.isoformat()}.parquet"
+    ma7_meta = ma7_dir / METADATA_FILE
 
-    if previous_dir.exists():
-        try:
-            previous_file = _latest_snapshot_file(previous_dir)
-            previous_df = pd.read_parquet(previous_file)
-            previous_df = _normalize_snapshot_df(previous_df, lookback_date)
-            previous_snapshot_date = lookback_date
-            previous_files = sorted(previous_dir.glob("*.parquet"))
-            previous_fingerprint = _source_fingerprint(previous_files)
-        except Exception as exc:
-            logger.warning("Unable to load previous snapshot %s: %s", lookback_date, exc)
-
-    daily_dir = dest_root / "daily_top_changes" / f"snapshot_date={snapshot_date.isoformat()}"
-    daily_path = daily_dir / f"{snapshot_date.isoformat()}.parquet"
-    daily_meta = daily_dir / METADATA_FILE
-    daily_metadata = {
+    ma7_df, ma7_source_files = _build_ma7_df(snapshot_date, src_root, window_days)
+    ma7_fingerprint = _source_fingerprint(ma7_source_files)
+    ma7_metadata = {
         "snapshot_date": snapshot_date.isoformat(),
-        "source_fingerprint": current_fingerprint,
-        "previous_snapshot_date": previous_snapshot_date.isoformat() if previous_snapshot_date else None,
-        "previous_source_fingerprint": previous_fingerprint,
+        "source_fingerprint": ma7_fingerprint,
+        "window_days": window_days,
+        "source_partitions": [str(p) for p in sorted(ma7_source_files, key=lambda p: str(p))],
     }
 
     if not force:
-        existing_daily = _load_metadata(daily_meta)
+        existing_ma7 = _load_metadata(ma7_meta)
         if (
-            existing_daily
-            and existing_daily.get("source_fingerprint") == current_fingerprint
-            and existing_daily.get("previous_source_fingerprint") == previous_fingerprint
-            and daily_path.exists()
+            existing_ma7
+            and existing_ma7.get("source_fingerprint") == ma7_fingerprint
+            and ma7_path.exists()
         ):
-            logger.info("Skipping daily_top_changes for %s; no source changes", snapshot_date)
+            logger.info("Skipping daily_top_changes MA7 output for %s; no source changes", snapshot_date)
             return
 
-    daily_df = _build_daily_top_changes_df(current_df, previous_df, previous_snapshot_date)
-    daily_df = _prepare_table(daily_df, DAILY_TOP_CHANGES_SCHEMA)
-    _write_parquet(daily_df, DAILY_TOP_CHANGES_SCHEMA, daily_path)
-    _write_metadata(daily_meta, daily_metadata)
+    ma7_df = _prepare_table(ma7_df, MA7_SCHEMA)
+    _write_parquet(ma7_df, MA7_SCHEMA, ma7_path)
+    _write_metadata(ma7_meta, ma7_metadata)
 
 
 def _snapshot_dates_from_args(src_root: Path, snapshot_date: date | None) -> list[date]:
@@ -364,7 +341,7 @@ def _snapshot_dates_from_args(src_root: Path, snapshot_date: date | None) -> lis
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Compute GE price analytics: item history and daily top changes."
+        description="Compute GE price analytics: item history and 7-day moving average analytics."
     )
     parser.add_argument(
         "--src-root",
@@ -386,8 +363,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--lookback-days",
         type=int,
-        default=1,
-        help="Days lookback for daily top changes comparison",
+        default=7,
+        help="Number of days to include in the moving average window",
     )
     parser.add_argument(
         "--force",
@@ -407,7 +384,7 @@ def main() -> None:
             snapshot_date=snapshot_date,
             src_root=args.src_root,
             dest_root=args.dest,
-            lookback_days=args.lookback_days,
+            window_days=args.lookback_days,
             force=args.force,
         )
 
