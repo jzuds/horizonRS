@@ -29,12 +29,12 @@ ITEM_HISTORY_SCHEMA = pa.schema(
     ]
 )
 
-MA7_SCHEMA = pa.schema(
+MA_SCHEMA = pa.schema(
     [
         pa.field("item_id", pa.int32()),
         pa.field("snapshot_date", pa.date32()),
-        pa.field("ma7_avg_high_price", pa.float64(), nullable=True),
-        pa.field("ma7_avg_low_price", pa.float64(), nullable=True),
+        pa.field("MA_avg_high_price", pa.float64(), nullable=True),
+        pa.field("MA_avg_low_price", pa.float64(), nullable=True),
         pa.field("high_price_history", pa.list_(pa.float64()), nullable=True),
         pa.field("low_price_history", pa.list_(pa.float64()), nullable=True),
         pa.field("valid_days_high", pa.int32()),
@@ -179,7 +179,7 @@ def _build_item_history_df(df: pd.DataFrame) -> pd.DataFrame:
     ].copy()
 
 
-def _build_ma7_df(
+def _build_MA_df(
     snapshot_date: date,
     src_root: Path,
     window_days: int = 7,
@@ -203,7 +203,7 @@ def _build_ma7_df(
             continue
 
     if not frames:
-        return pd.DataFrame(columns=MA7_SCHEMA.names), source_files
+        return pd.DataFrame(columns=MA_SCHEMA.names), source_files
 
     combined = pd.concat(frames, ignore_index=True)
     window_dates = [snapshot_date - timedelta(days=offset) for offset in range(window_days - 1, -1, -1)]
@@ -218,8 +218,8 @@ def _build_ma7_df(
         return [None if pd.isna(v) else float(v) for v in values.tolist()]
 
     window_data = combined.groupby(level="item_id").agg(
-        ma7_avg_high_price=("avg_high_price", "mean"),
-        ma7_avg_low_price=("avg_low_price", "mean"),
+        MA_avg_high_price=("avg_high_price", "mean"),
+        MA_avg_low_price=("avg_low_price", "mean"),
         valid_days_high=("avg_high_price", lambda x: int(x.notna().sum())),
         valid_days_low=("avg_low_price", lambda x: int(x.notna().sum())),
     )
@@ -302,32 +302,32 @@ def _publish_snapshot(
             _write_parquet(item_history_df, ITEM_HISTORY_SCHEMA, item_history_path)
             _write_metadata(item_history_meta, current_metadata)
 
-    ma7_dir = dest_root / "daily_top_changes" / f"snapshot_date={snapshot_date.isoformat()}"
-    ma7_path = ma7_dir / f"{snapshot_date.isoformat()}.parquet"
-    ma7_meta = ma7_dir / METADATA_FILE
+    MA_dir = dest_root / "daily_top_changes" / f"snapshot_date={snapshot_date.isoformat()}"
+    MA_path = MA_dir / f"{snapshot_date.isoformat()}.parquet"
+    MA_meta = MA_dir / METADATA_FILE
 
-    ma7_df, ma7_source_files = _build_ma7_df(snapshot_date, src_root, window_days)
-    ma7_fingerprint = _source_fingerprint(ma7_source_files)
-    ma7_metadata = {
+    MA_df, MA_source_files = _build_MA_df(snapshot_date, src_root, window_days)
+    MA_fingerprint = _source_fingerprint(MA_source_files)
+    MA_metadata = {
         "snapshot_date": snapshot_date.isoformat(),
-        "source_fingerprint": ma7_fingerprint,
+        "source_fingerprint": MA_fingerprint,
         "window_days": window_days,
-        "source_partitions": [str(p) for p in sorted(ma7_source_files, key=lambda p: str(p))],
+        "source_partitions": [str(p) for p in sorted(MA_source_files, key=lambda p: str(p))],
     }
 
     if not force:
-        existing_ma7 = _load_metadata(ma7_meta)
+        existing_MA = _load_metadata(MA_meta)
         if (
-            existing_ma7
-            and existing_ma7.get("source_fingerprint") == ma7_fingerprint
-            and ma7_path.exists()
+            existing_MA
+            and existing_MA.get("source_fingerprint") == MA_fingerprint
+            and MA_path.exists()
         ):
-            logger.info("Skipping daily_top_changes MA7 output for %s; no source changes", snapshot_date)
+            logger.info("Skipping daily_top_changes MA output for %s; no source changes", snapshot_date)
             return
 
-    ma7_df = _prepare_table(ma7_df, MA7_SCHEMA)
-    _write_parquet(ma7_df, MA7_SCHEMA, ma7_path)
-    _write_metadata(ma7_meta, ma7_metadata)
+    MA_df = _prepare_table(MA_df, MA_SCHEMA)
+    _write_parquet(MA_df, MA_SCHEMA, MA_path)
+    _write_metadata(MA_meta, MA_metadata)
 
 
 def _snapshot_dates_from_args(src_root: Path, snapshot_date: date | None) -> list[date]:
