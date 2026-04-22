@@ -35,8 +35,12 @@ MA_SCHEMA = pa.schema(
         pa.field("snapshot_date", pa.date32()),
         pa.field("MA_avg_high_price", pa.float64(), nullable=True),
         pa.field("MA_avg_low_price", pa.float64(), nullable=True),
+        pa.field("MA_high_price_volume", pa.float64(), nullable=True),
+        pa.field("MA_low_price_volume", pa.float64(), nullable=True),
         pa.field("high_price_history", pa.list_(pa.float64()), nullable=True),
         pa.field("low_price_history", pa.list_(pa.float64()), nullable=True),
+        pa.field("high_volume_history", pa.list_(pa.float64()), nullable=True),
+        pa.field("low_volume_history", pa.list_(pa.float64()), nullable=True),
         pa.field("valid_days_high", pa.int32()),
         pa.field("valid_days_low", pa.int32()),
         pa.field("window_start_date", pa.date32(), nullable=True),
@@ -197,7 +201,16 @@ def _build_MA_df(
             source_file = _latest_snapshot_file(partition_dir)
             window_df = pd.read_parquet(source_file)
             window_df = _normalize_snapshot_df(window_df, window_date)
-            frames.append(window_df[["item_id", "avg_high_price", "avg_low_price", "snapshot_date"]])
+            frames.append(
+                window_df[[
+                    "item_id",
+                    "avg_high_price",
+                    "avg_low_price",
+                    "high_price_volume",
+                    "low_price_volume",
+                    "snapshot_date",
+                ]]
+            )
             source_files.append(source_file)
         except FileNotFoundError:
             continue
@@ -220,16 +233,22 @@ def _build_MA_df(
     window_data = combined.groupby(level="item_id").agg(
         MA_avg_high_price=("avg_high_price", "mean"),
         MA_avg_low_price=("avg_low_price", "mean"),
+        MA_high_price_volume=("high_price_volume", "mean"),
+        MA_low_price_volume=("low_price_volume", "mean"),
         valid_days_high=("avg_high_price", lambda x: int(x.notna().sum())),
         valid_days_low=("avg_low_price", lambda x: int(x.notna().sum())),
     )
 
     high_history = combined["avg_high_price"].groupby(level="item_id").apply(make_window_list)
     low_history = combined["avg_low_price"].groupby(level="item_id").apply(make_window_list)
+    high_volume_history = combined["high_price_volume"].groupby(level="item_id").apply(make_window_list)
+    low_volume_history = combined["low_price_volume"].groupby(level="item_id").apply(make_window_list)
 
     aggregated = window_data.reset_index()
     aggregated["high_price_history"] = aggregated["item_id"].map(high_history)
     aggregated["low_price_history"] = aggregated["item_id"].map(low_history)
+    aggregated["high_volume_history"] = aggregated["item_id"].map(high_volume_history)
+    aggregated["low_volume_history"] = aggregated["item_id"].map(low_volume_history)
     aggregated["snapshot_date"] = snapshot_date
     aggregated["window_start_date"] = snapshot_date - timedelta(days=window_days - 1)
     aggregated["window_end_date"] = snapshot_date
