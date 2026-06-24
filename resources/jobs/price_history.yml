@@ -6,7 +6,7 @@ resources:
       email_notifications:
         on_failure:
           - ${var.notification_email}
-        no_alert_for_skipped_runs: true
+        no_alert_for_skipped_runs: false
 
       schedule:
         quartz_cron_expression: "0 0 6 * * ?"
@@ -25,36 +25,6 @@ resources:
             parameters:
               - "--landing-root"
               - "/Volumes/${var.catalog}/raw/landing/ge_price_24h"
-          environment_key: Default
-
-        - task_key: ge_price_process_24h
-          depends_on:
-            - task_key: ge_price_data_24h
-          spark_python_task:
-            python_file: ${workspace.file_path}/src/process/process_ge_price_data_24h.py
-            python_path:
-              - ${workspace.file_path}
-            parameters:
-              - "--src-dir"
-              - "/Volumes/${var.catalog}/raw/landing/ge_price_24h/ingestion_date={{job.start_time.iso_date}}"
-              - "--dest"
-              - "/Volumes/${var.catalog}/raw/processed/ge_price_24h"
-          environment_key: Default
-
-        - task_key: ge_price_analytics_24h
-          depends_on:
-            - task_key: ge_price_process_24h
-          spark_python_task:
-            python_file: ${workspace.file_path}/src/process/compute_ge_price_analytics.py
-            python_path:
-              - ${workspace.file_path}
-            parameters:
-              - "--src-root"
-              - "/Volumes/${var.catalog}/raw/processed/ge_price_24h"
-              - "--dest"
-              - "/Volumes/${var.catalog}/raw/processed/ge_price_24h_analytics"
-              - "--lookback-days"
-              - "7"
           environment_key: Default
 
       environments:
