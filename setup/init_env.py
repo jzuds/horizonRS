@@ -63,5 +63,4 @@ for sql_file in sorted(sql_dir.glob("*.sql")):
     statements = sql_text.split(";")
 
     for stmt in statements:
-        print(stmt)
-        #run_sql(stmt)
+        run_sql(stmt)
