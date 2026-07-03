@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: databricks/setup-cli@v1
+      - uses: databricks/setup-cli@v1.6.0
 
       - name: Validate
         run: databricks bundle validate
@@ -53,7 +53,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r setup/requirements.txt
 
-      - uses: databricks/setup-cli@v1
+      - uses: databricks/setup-cli@v1.6.0
 
       - name: Initialize catalogs, schemas, and volumes
         run: python setup/init_env.py --env $DEPLOY_ENV
