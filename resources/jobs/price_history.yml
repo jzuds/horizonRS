@@ -30,7 +30,7 @@ resources:
           depends_on:
             - task_key: ge_price_data_24h
           spark_python_task:
-            python_file: ${workspace.file_path}/src/transform/process_price_data.py
+            python_file: ${workspace.file_path}/src/transform/stage_ge_price_data.py
             parameters:
               - "--input-root"
               - "/Volumes/${var.catalog}/raw/landing/ge_price_24h"
