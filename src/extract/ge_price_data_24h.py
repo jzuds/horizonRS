@@ -30,13 +30,13 @@ def fetch_24h(session, snapshot_ts: datetime) -> dict:
     return payload
 
 
-def landing_path(landing_root: str, ingestion_date: date, snapshot_ts: datetime) -> Path:
-    ts_str = snapshot_ts.strftime("%Y-%m-%dT%H%M%SZ")
-    return Path(landing_root) / f"ingestion_date={ingestion_date.isoformat()}" / f"snapshot_ts={ts_str}.json"
+def landing_path(landing_root: str, partition_key: str, ingested_at: datetime) -> Path:
+    filename = f"daily_price_{ingested_at.strftime('%Y%m%dT%H%M%SZ')}.json"
+    return Path(landing_root) / f"date={partition_key}" / filename
 
 
-def write_landing(payload: dict, landing_root: str, ingestion_date: date, snapshot_ts: datetime) -> Path:
-    path = landing_path(landing_root, ingestion_date, snapshot_ts)
+def write_landing(payload: dict, landing_root: str, partition_key: str, ingested_at: datetime) -> Path:
+    path = landing_path(landing_root, partition_key, ingested_at)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     with path.open("w") as f:
@@ -77,13 +77,15 @@ def main() -> None:
         tzinfo=timezone.utc,
     )
 
+    partition_key = snapshot_ts.strftime("%Y-%m-%d")
+
     log.info("Fetching 24h prices for %s", price_date)
 
     session = build_session()
     payload = fetch_24h(session, snapshot_ts)
 
-    ingestion_date = datetime.now(timezone.utc).date()
-    write_landing(payload, args.landing_root, ingestion_date, snapshot_ts)
+    ingestion_date = datetime.now(timezone.utc)
+    write_landing(payload, args.landing_root, partition_key, ingestion_date)
 
 
 if __name__ == "__main__":
