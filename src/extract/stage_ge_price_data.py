@@ -4,9 +4,22 @@ import logging
 import os, uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from datetime import date
+import sys
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+
+try:
+    CURRENT_DIR = Path(__file__).resolve().parent
+except NameError:
+    CURRENT_DIR = Path.cwd()
+
+SRC_DIR = CURRENT_DIR.parent
+sys.path.append(str(SRC_DIR))
+
+from utility.utilities import get_prior_date, date_to_str, str_to_date
+
 
 log = logging.getLogger(__name__)
 
@@ -114,7 +127,8 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument(
         "--date",
-        required=True,
+        required=False,
+        default=get_prior_date(date.today()),
         help="Partition date (YYYY-MM-DD).",
     )
 
@@ -136,14 +150,16 @@ def main() -> None:
 
     args = parse_args()
 
+    date_partition = date_to_str(args.date)
+
     input_path = landing_path(
         args.landing_root,
-        args.date,
+        date_partition,
     )
 
     output_path = stage_path(
         args.output_root,
-        args.date,
+        date_partition,
     )
 
     if output_path.exists() and not args.force_overwrite:

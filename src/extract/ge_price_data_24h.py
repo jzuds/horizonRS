@@ -15,6 +15,7 @@ SRC_DIR = CURRENT_DIR.parent
 sys.path.append(str(SRC_DIR))
 
 from utility.wiki_api import BASE_URL, WIKI_API_ENDPOINTS, build_session
+from utility.utilities import get_prior_date, date_to_str, str_to_date
 
 log = logging.getLogger(__name__)
 
@@ -74,12 +75,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def resolve_date(date_str: str | None) -> date:
-    if date_str:
-        return date.fromisoformat(date_str)
-    return datetime.now(timezone.utc).date() - timedelta(days=1)
-
-
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -87,13 +82,17 @@ def main() -> None:
     )
 
     args = parse_args()
-    price_date = resolve_date(args.date)
+
+    if args.date:
+        price_date = str_to_date(args.date)
+    else:
+        price_date = get_prior_date(date.today())
 
     snapshot_ts = datetime(
         price_date.year, price_date.month, price_date.day,
         tzinfo=timezone.utc,
     )
-    partition_key = snapshot_ts.strftime("%Y-%m-%d")
+    partition_key = date_to_str(snapshot_ts)
     path = landing_path(args.landing_root, partition_key)
     
     should_skip = (not args.force_overwrite) and path.exists()
