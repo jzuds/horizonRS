@@ -10,7 +10,7 @@ resources:
         no_alert_for_skipped_runs: false
 
       schedule:
-        quartz_cron_expression: "0 0 6 * * ?"
+        quartz_cron_expression: "0 30 0 * * ?"
         timezone_id: UTC
         pause_status: ${var.schedule_pause_status}
 
@@ -24,6 +24,8 @@ resources:
             parameters:
               - "--landing-root"
               - "/Volumes/${var.catalog}/raw/landing/ge_price_24h"
+              - "--date"
+              - "{{job.start_time.iso_date}}"
           environment_key: Default
 
         - task_key: stage_price_data
@@ -36,6 +38,8 @@ resources:
               - "/Volumes/${var.catalog}/raw/landing/ge_price_24h"
               - "--output-root"
               - "/Volumes/${var.catalog}/raw/stage/ge_price_24h"
+              - "--date"
+              - "{{job.start_time.iso_date}}"
           environment_key: Default
 
       environments:
