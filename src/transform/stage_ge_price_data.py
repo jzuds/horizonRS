@@ -57,8 +57,7 @@ def transform(payload: dict) -> pa.Table:
     if not isinstance(raw, dict):
         raise ValueError("Expected payload['data'] to be a dictionary.")
 
-    # 'timestamp' is unix epoch seconds; snapshot_ts/ingested_at are already ISO 8601 with offset
-    api_timestamp = datetime.fromtimestamp(payload["timestamp"], tz=timezone.utc)
+    api_timestamp = int(payload["timestamp"])
     snapshot_ts = datetime.fromisoformat(payload["snapshot_ts"])
     ingested_at = datetime.fromisoformat(payload["ingested_at"])
 
@@ -83,7 +82,7 @@ def transform(payload: dict) -> pa.Table:
             "high_price_volume": pa.array(high_vol, type=pa.int64()),
             "avg_low_price": pa.array(avg_low, type=pa.int64()),
             "low_price_volume": pa.array(low_vol, type=pa.int64()),
-            "api_timestamp": pa.array([api_timestamp] * n, type=pa.timestamp("ns", tz="UTC")),
+            "api_timestamp": pa.array([api_timestamp] * n, type=pa.int64()),
             "snapshot_ts": pa.array([snapshot_ts] * n, type=pa.timestamp("ns", tz="UTC")),
             "ingested_at": pa.array([ingested_at] * n, type=pa.timestamp("ns", tz="UTC")),
         },
