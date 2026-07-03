@@ -7,20 +7,26 @@ on:
       - dev
       - "feature/**"
 
+concurrency:
+  group: osrs-ge-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
 jobs:
   validate:
     name: Validate bundle
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: databricks/setup-cli@main
+      - uses: actions/checkout@v5
+
+      - uses: databricks/setup-cli@v1.6.0
 
       - name: Validate
         run: databricks bundle validate
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
   deploy:
     name: Setup environment and deploy
@@ -28,7 +34,7 @@ jobs:
     needs: validate
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Determine deployment environment
         run: |
@@ -38,24 +44,19 @@ jobs:
             echo "DEPLOY_ENV=dev" >> $GITHUB_ENV
           fi
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
+          cache-dependency-path: setup/requirements.txt
 
       - name: Install Python dependencies
         run: pip install -r setup/requirements.txt
 
-      - uses: databricks/setup-cli@main
+      - uses: databricks/setup-cli@v1.6.0
 
       - name: Initialize catalogs, schemas, and volumes
         run: python setup/init_env.py --env $DEPLOY_ENV
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
       - name: Deploy bundle
         run: databricks bundle deploy -t $DEPLOY_ENV --auto-approve
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}

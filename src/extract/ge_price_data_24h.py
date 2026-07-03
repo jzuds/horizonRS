@@ -2,7 +2,7 @@ import argparse
 import json
 import logging
 from datetime import date, datetime, timedelta, timezone
-
+import os, uuid
 import sys
 from pathlib import Path
 
@@ -15,6 +15,7 @@ SRC_DIR = CURRENT_DIR.parent
 sys.path.append(str(SRC_DIR))
 
 from utility.wiki_api import BASE_URL, WIKI_API_ENDPOINTS, build_session
+from utility.utilities import get_prior_date, date_to_str, str_to_date
 
 log = logging.getLogger(__name__)
 
@@ -30,17 +31,29 @@ def fetch_24h(session, snapshot_ts: datetime) -> dict:
     return payload
 
 
-def landing_path(landing_root: str, partition_key: str, ingested_at: datetime) -> Path:
-    filename = f"daily_price_{ingested_at.strftime('%Y%m%dT%H%M%SZ')}.json"
+def build_enveloped_payload(payload: dict, snapshot_ts: datetime, ingested_at: datetime) -> dict:
+    return {
+        "timestamp": payload.get("timestamp", -1),
+        "snapshot_ts": snapshot_ts.isoformat(),
+        "ingested_at": ingested_at.isoformat(),
+        "source": "osrs_ge_24h",
+        "data": payload.get("data", []),
+    }
+
+
+def landing_path(landing_root: str, partition_key) -> Path:
+    filename = f"daily_price.json"
     return Path(landing_root) / f"date={partition_key}" / filename
 
 
-def write_landing(payload: dict, landing_root: str, partition_key: str, ingested_at: datetime) -> Path:
-    path = landing_path(landing_root, partition_key, ingested_at)
+def write_landing(payload: dict, landing_root: str, partition_key: str) -> Path:
+    path = landing_path(landing_root, partition_key)
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    with path.open("w") as f:
-        json.dump(payload, f)
+    tmp_path = path.with_suffix(f".tmp.{os.getpid()}.{uuid.uuid4().hex[:8]}")
+    with tmp_path.open("w") as f:
+        json.dump(payload, f, sort_keys=True)
+    tmp_path.replace(path)
 
     log.info("Landed %d items to %s", len(payload["data"]), path)
     return path
@@ -54,13 +67,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Price date (YYYY-MM-DD). Defaults to yesterday (UTC).",
     )
+    parser.add_argument(
+        "--force-overwrite",
+        action="store_true",
+        help="If set, ignores existing snapshot and re-fetches data.",
+    )
     return parser.parse_args()
-
-
-def resolve_date(date_str: str | None) -> date:
-    if date_str:
-        return date.fromisoformat(date_str)
-    return datetime.now(timezone.utc).date() - timedelta(days=1)
 
 
 def main() -> None:
@@ -70,22 +82,38 @@ def main() -> None:
     )
 
     args = parse_args()
-    price_date = resolve_date(args.date)
+
+    if args.date:
+        price_date = str_to_date(args.date)
+    else:
+        price_date = get_prior_date(date.today())
 
     snapshot_ts = datetime(
         price_date.year, price_date.month, price_date.day,
         tzinfo=timezone.utc,
     )
-
-    partition_key = snapshot_ts.strftime("%Y-%m-%d")
+    partition_key = date_to_str(snapshot_ts)
+    path = landing_path(args.landing_root, partition_key)
+    
+    should_skip = (not args.force_overwrite) and path.exists()
+    if should_skip:
+        log.info("Skipping existing snapshot %s", path)
+        return
 
     log.info("Fetching 24h prices for %s", price_date)
 
     session = build_session()
-    payload = fetch_24h(session, snapshot_ts)
 
-    ingestion_date = datetime.now(timezone.utc)
-    write_landing(payload, args.landing_root, partition_key, ingestion_date)
+    ingestion_dt = datetime.now(timezone.utc)
+    raw_payload = fetch_24h(session, snapshot_ts)
+    
+    enveloped_payload = build_enveloped_payload(
+        raw_payload,
+        snapshot_ts,
+        ingestion_dt,
+    )
+
+    write_landing(enveloped_payload, args.landing_root, partition_key)
 
 
 if __name__ == "__main__":
