@@ -37,7 +37,7 @@ def build_enveloped_payload(payload: dict, snapshot_ts: datetime, ingested_at: d
         "snapshot_ts": snapshot_ts.isoformat(),
         "ingested_at": ingested_at.isoformat(),
         "source": "osrs_ge_24h",
-        "data": payload.get("data", []),
+        "data": payload.get("data", {}),
     }
 
 
@@ -106,6 +106,10 @@ def main() -> None:
 
     ingestion_dt = datetime.now(timezone.utc)
     raw_payload = fetch_24h(session, snapshot_ts)
+    
+    if len(raw_payload.get("data")) == 0:
+        log.info("Empty or invalid data for %s — skipping write", price_date)
+        return
     
     enveloped_payload = build_enveloped_payload(
         raw_payload,
