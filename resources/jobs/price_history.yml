@@ -32,7 +32,7 @@ resources:
           spark_python_task:
             python_file: ${workspace.file_path}/src/transform/stage_ge_price_data.py
             parameters:
-              - "--input-root"
+              - "--landing-root"
               - "/Volumes/${var.catalog}/raw/landing/ge_price_24h"
               - "--output-root"
               - "/Volumes/${var.catalog}/raw/stage/ge_price_24h"
