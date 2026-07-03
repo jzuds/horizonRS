@@ -29,9 +29,9 @@ PARQUET_SCHEMA = pa.schema([
     ("high_price_volume", pa.int64()),
     ("avg_low_price", pa.int64()),
     ("low_price_volume", pa.int64()),
-    ("api_timestamp", pa.timestamp("ns", tz="UTC")),
-    ("snapshot_ts", pa.timestamp("ns", tz="UTC")),
-    ("ingested_at", pa.timestamp("ns", tz="UTC")),
+    ("api_timestamp", pa.int64()),
+    ("snapshot_ts", pa.timestamp("us", tz="UTC")),
+    ("ingested_at", pa.timestamp("us", tz="UTC")),
 ])
 
 
