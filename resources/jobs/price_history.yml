@@ -26,6 +26,18 @@ resources:
               - "/Volumes/${var.catalog}/raw/landing/ge_price_24h"
           environment_key: Default
 
+        - task_key: stage_price_data
+          depends_on:
+            - task_key: ge_price_data_24h
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/transform/process_price_data.py
+            parameters:
+              - "--input-root"
+              - "/Volumes/${var.catalog}/raw/landing/ge_price_24h"
+              - "--output-root"
+              - "/Volumes/${var.catalog}/raw/stage/ge_price_24h"
+          environment_key: Default
+
       environments:
         - environment_key: Default
           spec:
