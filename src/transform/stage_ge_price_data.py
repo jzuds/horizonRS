@@ -128,7 +128,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--date",
         required=False,
-        default=get_prior_date(date.today()),
+        default=date_to_str(get_prior_date(date.today())),
         help="Partition date (YYYY-MM-DD).",
     )
 
@@ -150,7 +150,7 @@ def main() -> None:
 
     args = parse_args()
 
-    date_partition = date_to_str(args.date)
+    date_partition = args.date
 
     input_path = landing_path(
         args.landing_root,
