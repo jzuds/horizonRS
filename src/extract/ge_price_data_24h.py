@@ -107,9 +107,10 @@ def main() -> None:
     ingestion_dt = datetime.now(timezone.utc)
     raw_payload = fetch_24h(session, snapshot_ts)
     
-    if len(raw_payload.get("data")) == 0:
-        log.info("Empty or invalid data for %s — skipping write", price_date)
-        return
+    if not raw_payload.get("data"):
+        raise RuntimeError(
+            f"No 24h price data returned for {price_date}. Failing ingestion."
+        )
     
     enveloped_payload = build_enveloped_payload(
         raw_payload,
