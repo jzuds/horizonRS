@@ -10,7 +10,7 @@ resources:
         no_alert_for_skipped_runs: false
 
       schedule:
-        quartz_cron_expression: "4 30 0 * * ?"
+        quartz_cron_expression: "5 30 0 * * ?"
         timezone_id: UTC
         pause_status: ${var.schedule_pause_status}
 
