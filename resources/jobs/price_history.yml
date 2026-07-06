@@ -3,6 +3,10 @@ resources:
     price_history:
       name: load_price_history
 
+      parameters:
+        - name: processing_date
+          default: "{{job.start_time.iso_date}}"
+
       email_notifications:
         on_failure:
           - ${var.notification_email}
@@ -24,6 +28,7 @@ resources:
         # 24H EXTRACT
         # ----------------------------
         - task_key: ge_price_data_24h
+
           spark_python_task:
             python_file: ${workspace.file_path}/src/extract/extract_ge_price_data.py
             parameters:
@@ -32,7 +37,8 @@ resources:
               - "--landing-root"
               - "/Volumes/${var.catalog}/raw/landing/granularity=24h"
               - "--date"
-              - "{{job.start_time.iso_date}}"
+              - "{{job.parameters.processing_date}}"
+
           environment_key: Default
 
 
@@ -40,6 +46,7 @@ resources:
         # 24H STAGE
         # ----------------------------
         - task_key: stage_price_data_24h
+
           depends_on:
             - task_key: ge_price_data_24h
 
@@ -53,7 +60,7 @@ resources:
               - "--output-root"
               - "/Volumes/${var.catalog}/raw/stage/granularity=24h"
               - "--date"
-              - "{{job.start_time.iso_date}}"
+              - "{{job.parameters.processing_date}}"
 
           environment_key: Default
 
@@ -62,6 +69,7 @@ resources:
         # 5M EXTRACT
         # ----------------------------
         - task_key: ge_price_data_5m
+
           depends_on:
             - task_key: stage_price_data_24h
 
@@ -73,7 +81,7 @@ resources:
               - "--landing-root"
               - "/Volumes/${var.catalog}/raw/landing/granularity=5m"
               - "--date"
-              - "{{job.start_time.iso_date}}"
+              - "{{job.parameters.processing_date}}"
 
           environment_key: Default
 
@@ -82,6 +90,7 @@ resources:
         # 5M STAGE
         # ----------------------------
         - task_key: stage_price_data_5m
+
           depends_on:
             - task_key: ge_price_data_5m
 
@@ -95,7 +104,7 @@ resources:
               - "--output-root"
               - "/Volumes/${var.catalog}/raw/stage/granularity=5m"
               - "--date"
-              - "{{job.start_time.iso_date}}"
+              - "{{job.parameters.processing_date}}"
 
           environment_key: Default
 
@@ -104,6 +113,7 @@ resources:
         # 1H EXTRACT
         # ----------------------------
         - task_key: ge_price_data_1h
+
           depends_on:
             - task_key: stage_price_data_24h
 
@@ -115,7 +125,7 @@ resources:
               - "--landing-root"
               - "/Volumes/${var.catalog}/raw/landing/granularity=1h"
               - "--date"
-              - "{{job.start_time.iso_date}}"
+              - "{{job.parameters.processing_date}}"
 
           environment_key: Default
 
@@ -124,6 +134,7 @@ resources:
         # 1H STAGE
         # ----------------------------
         - task_key: stage_price_data_1h
+
           depends_on:
             - task_key: ge_price_data_1h
 
@@ -137,7 +148,7 @@ resources:
               - "--output-root"
               - "/Volumes/${var.catalog}/raw/stage/granularity=1h"
               - "--date"
-              - "{{job.start_time.iso_date}}"
+              - "{{job.parameters.processing_date}}"
 
           environment_key: Default
 
