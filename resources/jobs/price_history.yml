@@ -6,6 +6,7 @@ resources:
       email_notifications:
         on_failure:
           - ${var.notification_email}
+
       notification_settings:
         no_alert_for_skipped_runs: false
 
@@ -18,29 +19,128 @@ resources:
         enabled: true
 
       tasks:
+
+        # ----------------------------
+        # 24H EXTRACT
+        # ----------------------------
         - task_key: ge_price_data_24h
           spark_python_task:
-            python_file: ${workspace.file_path}/src/extract/ge_price_data_24h.py
+            python_file: ${workspace.file_path}/src/extract/extract_ge_price_data.py
             parameters:
+              - "--granularity"
+              - "24h"
               - "--landing-root"
-              - "/Volumes/${var.catalog}/raw/landing/ge_price_24h"
+              - "/Volumes/${var.catalog}/raw/landing/granularity=24h"
               - "--date"
               - "{{job.start_time.iso_date}}"
           environment_key: Default
 
-        - task_key: stage_price_data
+
+        # ----------------------------
+        # 24H STAGE
+        # ----------------------------
+        - task_key: stage_price_data_24h
           depends_on:
             - task_key: ge_price_data_24h
+
           spark_python_task:
-            python_file: ${workspace.file_path}/src/transform/stage_ge_price_data.py
+            python_file: ${workspace.file_path}/src/extract/stage_ge_price_data.py
             parameters:
+              - "--granularity"
+              - "24h"
               - "--landing-root"
-              - "/Volumes/${var.catalog}/raw/landing/ge_price_24h"
+              - "/Volumes/${var.catalog}/raw/landing/granularity=24h"
               - "--output-root"
-              - "/Volumes/${var.catalog}/raw/stage/ge_price_24h"
+              - "/Volumes/${var.catalog}/raw/stage/granularity=24h"
               - "--date"
               - "{{job.start_time.iso_date}}"
+
           environment_key: Default
+
+
+        # ----------------------------
+        # 5M EXTRACT
+        # ----------------------------
+        - task_key: ge_price_data_5m
+          depends_on:
+            - task_key: stage_price_data_24h
+
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/extract/extract_ge_price_data.py
+            parameters:
+              - "--granularity"
+              - "5m"
+              - "--landing-root"
+              - "/Volumes/${var.catalog}/raw/landing/granularity=5m"
+              - "--date"
+              - "{{job.start_time.iso_date}}"
+
+          environment_key: Default
+
+
+        # ----------------------------
+        # 5M STAGE
+        # ----------------------------
+        - task_key: stage_price_data_5m
+          depends_on:
+            - task_key: ge_price_data_5m
+
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/extract/stage_ge_price_data.py
+            parameters:
+              - "--granularity"
+              - "5m"
+              - "--landing-root"
+              - "/Volumes/${var.catalog}/raw/landing/granularity=5m"
+              - "--output-root"
+              - "/Volumes/${var.catalog}/raw/stage/granularity=5m"
+              - "--date"
+              - "{{job.start_time.iso_date}}"
+
+          environment_key: Default
+
+
+        # ----------------------------
+        # 1H EXTRACT
+        # ----------------------------
+        - task_key: ge_price_data_1h
+          depends_on:
+            - task_key: stage_price_data_24h
+
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/extract/extract_ge_price_data.py
+            parameters:
+              - "--granularity"
+              - "1h"
+              - "--landing-root"
+              - "/Volumes/${var.catalog}/raw/landing/granularity=1h"
+              - "--date"
+              - "{{job.start_time.iso_date}}"
+
+          environment_key: Default
+
+
+        # ----------------------------
+        # 1H STAGE
+        # ----------------------------
+        - task_key: stage_price_data_1h
+          depends_on:
+            - task_key: ge_price_data_1h
+
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/extract/stage_ge_price_data.py
+            parameters:
+              - "--granularity"
+              - "1h"
+              - "--landing-root"
+              - "/Volumes/${var.catalog}/raw/landing/granularity=1h"
+              - "--output-root"
+              - "/Volumes/${var.catalog}/raw/stage/granularity=1h"
+              - "--date"
+              - "{{job.start_time.iso_date}}"
+
+          environment_key: Default
+
 
       environments:
         - environment_key: Default
