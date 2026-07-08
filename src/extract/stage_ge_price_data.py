@@ -1,6 +1,8 @@
 import argparse
 import json
 import logging
+import os
+import uuid
 from datetime import date, datetime, timezone
 from pathlib import Path
 import sys
@@ -60,6 +62,15 @@ def stage_path(
     partition_key: str,
 ) -> Path:
     return Path(root) / f"date={partition_key}"
+
+
+def output_path_for(output_dir: Path, json_file: Path) -> Path:
+    """The staged parquet path a given landing file maps to.
+
+    One landing file (one bucket) -> one parquet file. Its existence is the
+    idempotency marker: if it's there, this bucket has already been staged.
+    """
+    return output_dir / f"{json_file.stem}.parquet"
 
 
 def read_payload(path: Path) -> dict:
@@ -168,25 +179,123 @@ def add_parquet_metadata(
     )
 
 
+def stage_one(
+    json_file: Path,
+    output_file: Path,
+    granularity: str,
+    partition_date: str,
+) -> str:
+    """Stage a single landing file. Returns 'staged' or 'confirmed_empty'.
+
+    Writes to a temp path and atomically renames into place on success, per
+    the platform's run contract, so a crash mid-write never leaves a partial
+    parquet file behind for the next rerun to trip over.
+    """
+    payload = read_payload(json_file)
+
+    row_count = payload.get(
+        "row_count",
+        len(payload.get("data", {})),
+    )
+
+    if row_count == 0:
+        return "confirmed_empty"
+
+    table = transform(payload)
+    table = add_parquet_metadata(table, granularity, partition_date)
+
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = output_file.with_suffix(
+        f".tmp.{os.getpid()}.{uuid.uuid4().hex[:8]}"
+    )
+    pq.write_table(table, tmp_path, compression="snappy")
+    tmp_path.replace(output_file)
+
+    return "staged"
+
+
 def write_dataset(
     json_files: list[Path],
     output_dir: Path,
     granularity: str,
     partition_date: str,
-) -> None:
-    output_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+    force_overwrite: bool,
+    stop_on_error: bool,
+) -> dict:
+    """Stage every landing file that hasn't been staged yet.
+
+    Idempotency is per-bucket (per landing file), not per-day: a file whose
+    output parquet already exists is skipped, everything else is staged.
+    This is what makes it safe to call after every extraction run throughout
+    the day -- each call only does work for buckets landed since the last one.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    staged, skipped_existing, skipped_empty, failed = 0, 0, 0, 0
 
     for json_file in json_files:
-        log.info(
-            "[%s] Reading %s",
-            granularity,
-            json_file,
-        )
+        output_file = output_path_for(output_dir, json_file)
 
-        payload = read_payload(json_file)
+        if output_file.exists() and not force_overwrite:
+            skipped_existing += 1
+            continue
+
+        try:
+            outcome = stage_one(json_file, output_file, granularity, partition_date)
+
+            if outcome == "confirmed_empty":
+                skipped_empty += 1
+                log.info(
+                    "[%s] Skipping confirmed-empty bucket %s",
+                    granularity, json_file.name,
+                )
+            else:
+                staged += 1
+                log.info(
+                    "[%s] Staged %s -> %s",
+                    granularity, json_file.name, output_file,
+                )
+
+        except Exception:
+            failed += 1
+            log.exception(
+                "[%s] Failed to stage %s", granularity, json_file,
+            )
+            if stop_on_error:
+                raise
+
+    return {
+        "staged": staged,
+        "skipped_existing": skipped_existing,
+        "skipped_empty": skipped_empty,
+        "failed": failed,
+    }
+
+
+def preview_dataset(
+    json_files: list[Path],
+    output_dir: Path,
+    force_overwrite: bool,
+) -> dict:
+    """Report-only classification, mirroring extract's --report-only mode.
+
+    Doesn't write anything -- useful for checking whether a staging run is
+    actually needed before running one.
+    """
+    to_stage, already_staged, confirmed_empty, unreadable = 0, 0, 0, 0
+
+    for json_file in json_files:
+        output_file = output_path_for(output_dir, json_file)
+
+        if output_file.exists() and not force_overwrite:
+            already_staged += 1
+            continue
+
+        try:
+            payload = read_payload(json_file)
+        except (json.JSONDecodeError, OSError):
+            unreadable += 1
+            continue
 
         row_count = payload.get(
             "row_count",
@@ -194,38 +303,16 @@ def write_dataset(
         )
 
         if row_count == 0:
-            log.info(
-                "[%s] Skipping confirmed-empty bucket %s",
-                granularity,
-                json_file.name,
-            )
-            continue
+            confirmed_empty += 1
+        else:
+            to_stage += 1
 
-        table = transform(payload)
-
-        table = add_parquet_metadata(
-            table,
-            granularity,
-            partition_date,
-        )
-
-        output_file = (
-            output_dir
-            / f"{json_file.stem}.parquet"
-        )
-
-        pq.write_table(
-            table,
-            output_file,
-            compression="snappy",
-        )
-
-        log.info(
-            "[%s] Wrote %d rows to %s",
-            granularity,
-            table.num_rows,
-            output_file,
-        )
+    return {
+        "to_stage": to_stage,
+        "already_staged": already_staged,
+        "confirmed_empty": confirmed_empty,
+        "unreadable": unreadable,
+    }
 
 
 def parse_args() -> argparse.Namespace:
@@ -264,7 +351,34 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--force-overwrite",
         action="store_true",
-        help="Overwrite existing parquet files.",
+        help="Re-stage landing files even if a parquet output already exists "
+             "for them. Off by default: a plain rerun only stages buckets that "
+             "haven't been staged yet, so it's safe (and cheap) to call after "
+             "every extraction run throughout the day. Use this only if you "
+             "suspect a previously-staged bucket is wrong, not for routine "
+             "incremental staging.",
+    )
+
+    parser.add_argument(
+        "--stop-on-error",
+        action="store_true",
+        help="Abort the whole run on the first landing file that fails to "
+             "stage, instead of logging it and continuing with the rest.",
+    )
+
+    parser.add_argument(
+        "--fail-on-incomplete",
+        action="store_true",
+        help="Raise if any landing file failed to stage this run.",
+    )
+
+    parser.add_argument(
+        "--report-only",
+        action="store_true",
+        help="Don't stage anything. Classify each landing file as "
+             "already-staged, to-stage, confirmed-empty, or unreadable and "
+             "print a summary. Use this to decide whether a staging run is "
+             "actually needed before running one.",
     )
 
     return parser.parse_args()
@@ -285,7 +399,7 @@ def main() -> None:
     if args.date:
         price_date = args.date
     else:
-        price_date = get_prior_date(date.today())
+        price_date = date_to_str(get_prior_date(date.today()))
 
     json_files = landing_paths(
         args.landing_root,
@@ -303,42 +417,46 @@ def main() -> None:
         price_date,
     )
 
-    if (
-        output_dir.exists()
-        and any(output_dir.glob("*.parquet"))
-        and not args.force_overwrite
-    ):
+    log.info(
+        "[%s] Found %d landing file(s) for %s",
+        args.granularity,
+        len(json_files),
+        price_date,
+    )
+
+    if args.report_only:
+        report = preview_dataset(json_files, output_dir, args.force_overwrite)
         log.info(
-            "[%s] Skipping existing dataset %s",
-            args.granularity,
-            output_dir,
+            "[%s] Report date=%s to_stage=%d already_staged=%d "
+            "confirmed_empty=%d unreadable=%d total=%d",
+            args.granularity, price_date, report["to_stage"],
+            report["already_staged"], report["confirmed_empty"],
+            report["unreadable"], len(json_files),
         )
         return
 
-    if args.force_overwrite and output_dir.exists():
-        for parquet_file in output_dir.glob(
-            "*.parquet"
-        ):
-            parquet_file.unlink()
-
-    log.info(
-        "[%s] Found %d landing file(s)",
-        args.granularity,
-        len(json_files),
-    )
-
-    write_dataset(
+    result = write_dataset(
         json_files,
         output_dir,
         args.granularity,
-        args.date,
+        price_date,
+        force_overwrite=args.force_overwrite,
+        stop_on_error=args.stop_on_error,
     )
 
     log.info(
-        "[%s] Finished staging dataset %s",
-        args.granularity,
-        output_dir,
+        "[%s] Finished staging date=%s staged=%d skipped_existing=%d "
+        "skipped_empty=%d failed=%d total_landing_files=%d",
+        args.granularity, price_date, result["staged"],
+        result["skipped_existing"], result["skipped_empty"],
+        result["failed"], len(json_files),
     )
+
+    if result["failed"] and args.fail_on_incomplete:
+        raise RuntimeError(
+            f"{result['failed']} of {len(json_files)} landing file(s) failed "
+            f"to stage for {args.granularity} {price_date}."
+        )
 
 
 if __name__ == "__main__":
