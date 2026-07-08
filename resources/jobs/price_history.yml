@@ -5,7 +5,7 @@ resources:
 
       parameters:
         - name: processing_date
-          default: "{{job.start_time.iso_date}}"
+          default: ""
 
       email_notifications:
         on_failure:
