@@ -5,7 +5,7 @@ resources:
 
       parameters:
         - name: processing_date
-          default: "{{job.start_time.iso_date}}"
+          default: ""
 
       email_notifications:
         on_failure:
@@ -15,8 +15,8 @@ resources:
         no_alert_for_skipped_runs: false
 
       schedule:
-        quartz_cron_expression: "0 0 4 * * ?"
-        timezone_id: America/New_York
+        quartz_cron_expression: "0 10 0 * * ?"
+        timezone_id: UTC
         pause_status: ${var.schedule_pause_status}
 
       queue:

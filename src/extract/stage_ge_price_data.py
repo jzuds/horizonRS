@@ -257,9 +257,7 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument(
         "--date",
-        default=date_to_str(
-            get_prior_date(date.today())
-        ),
+        default=None,
         help="Partition date YYYY-MM-DD.",
     )
 
@@ -284,20 +282,25 @@ def main() -> None:
 
     args = parse_args()
 
+    if args.date:
+        price_date = args.date
+    else:
+        price_date = get_prior_date(date.today())
+
     json_files = landing_paths(
         args.landing_root,
-        args.date,
+        price_date,
     )
 
     if not json_files:
         raise FileNotFoundError(
             f"No landing JSON files found for "
-            f"{args.granularity} {args.date}"
+            f"{args.granularity} {price_date}"
         )
 
     output_dir = stage_path(
         args.output_root,
-        args.date,
+        price_date,
     )
 
     if (
