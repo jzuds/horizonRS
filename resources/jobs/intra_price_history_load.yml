@@ -1,11 +1,11 @@
 resources:
   jobs:
-    price_history:
-      name: load_price_history
+    intraday_price_history:
+      name: load_intra_daily_price_history
 
       parameters:
         - name: processing_date
-          default: ""
+          default: "{{job.start_time.iso_date}}"
 
       email_notifications:
         on_failure:
@@ -15,7 +15,7 @@ resources:
         no_alert_for_skipped_runs: false
 
       schedule:
-        quartz_cron_expression: "0 10 0 * * ?"
+        quartz_cron_expression: "0 0 12 * * ?"
         timezone_id: UTC
         pause_status: ${var.schedule_pause_status}
 
@@ -25,53 +25,9 @@ resources:
       tasks:
 
         # ----------------------------
-        # 24H EXTRACT
-        # ----------------------------
-        - task_key: ge_price_data_24h
-
-          spark_python_task:
-            python_file: ${workspace.file_path}/src/extract/extract_ge_price_data.py
-            parameters:
-              - "--granularity"
-              - "24h"
-              - "--landing-root"
-              - "/Volumes/${var.catalog}/raw/landing/pricing/granularity=24h"
-              - "--date"
-              - "{{job.parameters.processing_date}}"
-
-          environment_key: Default
-
-
-        # ----------------------------
-        # 24H STAGE
-        # ----------------------------
-        - task_key: stage_price_data_24h
-
-          depends_on:
-            - task_key: ge_price_data_24h
-
-          spark_python_task:
-            python_file: ${workspace.file_path}/src/extract/stage_ge_price_data.py
-            parameters:
-              - "--granularity"
-              - "24h"
-              - "--landing-root"
-              - "/Volumes/${var.catalog}/raw/landing/pricing/granularity=24h"
-              - "--output-root"
-              - "/Volumes/${var.catalog}/raw/stage/pricing/granularity=24h"
-              - "--date"
-              - "{{job.parameters.processing_date}}"
-
-          environment_key: Default
-
-
-        # ----------------------------
         # 5M EXTRACT
         # ----------------------------
         - task_key: ge_price_data_5m
-
-          depends_on:
-            - task_key: stage_price_data_24h
 
           spark_python_task:
             python_file: ${workspace.file_path}/src/extract/extract_ge_price_data.py
@@ -84,7 +40,6 @@ resources:
               - "{{job.parameters.processing_date}}"
 
           environment_key: Default
-
 
         # ----------------------------
         # 5M STAGE
@@ -108,14 +63,10 @@ resources:
 
           environment_key: Default
 
-
         # ----------------------------
         # 1H EXTRACT
         # ----------------------------
         - task_key: ge_price_data_1h
-
-          depends_on:
-            - task_key: stage_price_data_24h
 
           spark_python_task:
             python_file: ${workspace.file_path}/src/extract/extract_ge_price_data.py
@@ -128,7 +79,6 @@ resources:
               - "{{job.parameters.processing_date}}"
 
           environment_key: Default
-
 
         # ----------------------------
         # 1H STAGE
@@ -151,7 +101,6 @@ resources:
               - "{{job.parameters.processing_date}}"
 
           environment_key: Default
-
 
       environments:
         - environment_key: Default
