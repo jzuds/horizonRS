@@ -1,7 +1,7 @@
 resources:
   jobs:
     price_history:
-      name: load_price_history
+      name: load_full_daily_price_history
 
       parameters:
         - name: processing_date
