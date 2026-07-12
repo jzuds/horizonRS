@@ -1,5 +1,6 @@
 bundle:
   name: osrs-ge-pipeline
+  engine: direct
 
 include:
   - resources/jobs/*.yml
