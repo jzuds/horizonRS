@@ -31,7 +31,7 @@ variables:
 
 targets:
   dev:
-    mode: development
+    mode: production
     default: true
     workspace:
       host: https://dbc-197944cb-fe6f.cloud.databricks.com
