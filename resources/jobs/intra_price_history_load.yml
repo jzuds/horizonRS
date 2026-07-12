@@ -1,7 +1,7 @@
 resources:
   jobs:
     intraday_price_history:
-      name: load_intra_daily_price_history
+      name: ${var.env_name}_load_intra_daily_price_history
 
       parameters:
         - name: processing_date
@@ -74,7 +74,7 @@ resources:
               - "--granularity"
               - "1h"
               - "--landing-root"
-              - "/Volumes/osrs_analytics_${var.env_name}/stage/processed/pricing/granularity=1h"
+              - "/Volumes/osrs_analytics_${var.env_name}/stage/landing/pricing/granularity=1h"
               - "--date"
               - "{{job.parameters.processing_date}}"
 
