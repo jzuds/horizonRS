@@ -7,8 +7,8 @@ resources:
       volume_type: MANAGED
       comment: Raw landing files
 
-    stage_volume:
-      name: stage
+    processed_volume:
+      name: processed
       catalog_name: osrs_analytics_${var.env_name}
       schema_name: stage
       volume_type: MANAGED
