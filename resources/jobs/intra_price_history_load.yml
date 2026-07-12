@@ -35,7 +35,7 @@ resources:
               - "--granularity"
               - "5m"
               - "--landing-root"
-              - "/Volumes/osrs_analytics_${var.env_name}/raw/landing/pricing/granularity=5m"
+              - "/Volumes/osrs_analytics_${var.env_name}/stage/landing/pricing/granularity=5m"
               - "--date"
               - "{{job.parameters.processing_date}}"
 
