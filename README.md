@@ -28,7 +28,7 @@ uv run python src/utility/inspect_pq_file.py \
 ```
 
 ## Contributing
-- How to add new items or pipelines
+- Work in progress.
 
 ## License
 - See LICENSE file.
