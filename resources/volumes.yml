@@ -3,14 +3,14 @@ resources:
     landing_volume:
       name: landing
       catalog_name: osrs_analytics_${var.env_name}
-      schema_name: raw
+      schema_name: stage
       volume_type: MANAGED
       comment: Raw landing files
 
     stage_volume:
       name: stage
       catalog_name: osrs_analytics_${var.env_name}
-      schema_name: raw
+      schema_name: stage
       volume_type: MANAGED
       comment: Staging area for processed files
 

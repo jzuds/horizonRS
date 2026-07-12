@@ -1,7 +1,7 @@
 resources:
   schemas:
-    raw:
-      name: raw
+    stage:
+      name: stage
       catalog_name: osrs_analytics_${var.env_name}
       comment: ${var.env_name}
     analytics:
