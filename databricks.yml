@@ -4,7 +4,6 @@ bundle:
 
 include:
   - resources/jobs/*.yml
-  - resources/catalogs.yml
   - resources/schemas.yml
   - resources/volumes.yml
 
