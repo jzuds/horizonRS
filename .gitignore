@@ -114,3 +114,4 @@ Thumbs.db
 tinkering/
 uv.lock
 output/
+.env
