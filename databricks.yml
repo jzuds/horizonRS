@@ -3,6 +3,9 @@ bundle:
 
 include:
   - resources/jobs/*.yml
+  - resources/catalogs.yml
+  - resources/schemas.yml
+  - resources/volumes.yml
 
 variables:
   warehouse_name:
@@ -22,9 +25,9 @@ variables:
     description: PAUSED in dev, UNPAUSED in prod
     default: PAUSED
 
-  catalog:
-    description: Catalog to use
-    default: osrs_analytics_dev
+  env_name:
+    description: Environment to use
+    default: dev
 
 targets:
   dev:
@@ -35,7 +38,7 @@ targets:
       root_path: ~/.bundle/${bundle.name}/${bundle.target}
     variables:
       schedule_pause_status: PAUSED
-      catalog: osrs_analytics_dev
+      env_name: dev
 
   prod:
     mode: production
@@ -44,4 +47,4 @@ targets:
       root_path: /Shared/bundles/${bundle.name}
     variables:
       schedule_pause_status: UNPAUSED
-      catalog: osrs_analytics_prod
+      env_name: prod

@@ -1,0 +1,5 @@
+resources:
+  catalogs:
+    analytics_catalog:
+      name: osrs_analytics_${var.env_name}
+      comment: ${var.env_name}

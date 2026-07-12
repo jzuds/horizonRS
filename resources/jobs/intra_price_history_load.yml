@@ -35,7 +35,7 @@ resources:
               - "--granularity"
               - "5m"
               - "--landing-root"
-              - "/Volumes/${var.catalog}/raw/landing/pricing/granularity=5m"
+              - "/Volumes/osrs_analytics_${var.env_name}/raw/landing/pricing/granularity=5m"
               - "--date"
               - "{{job.parameters.processing_date}}"
 
@@ -55,9 +55,9 @@ resources:
               - "--granularity"
               - "5m"
               - "--landing-root"
-              - "/Volumes/${var.catalog}/raw/landing/pricing/granularity=5m"
+              - "/Volumes/osrs_analytics_${var.env_name}/raw/landing/pricing/granularity=5m"
               - "--output-root"
-              - "/Volumes/${var.catalog}/raw/stage/pricing/granularity=5m"
+              - "/Volumes/osrs_analytics_${var.env_name}/raw/stage/pricing/granularity=5m"
               - "--date"
               - "{{job.parameters.processing_date}}"
 
@@ -74,7 +74,7 @@ resources:
               - "--granularity"
               - "1h"
               - "--landing-root"
-              - "/Volumes/${var.catalog}/raw/landing/pricing/granularity=1h"
+              - "/Volumes/osrs_analytics_${var.env_name}/raw/landing/pricing/granularity=1h"
               - "--date"
               - "{{job.parameters.processing_date}}"
 
@@ -94,9 +94,9 @@ resources:
               - "--granularity"
               - "1h"
               - "--landing-root"
-              - "/Volumes/${var.catalog}/raw/landing/pricing/granularity=1h"
+              - "/Volumes/osrs_analytics_${var.env_name}/raw/landing/pricing/granularity=1h"
               - "--output-root"
-              - "/Volumes/${var.catalog}/raw/stage/pricing/granularity=1h"
+              - "/Volumes/osrs_analytics_${var.env_name}/raw/stage/pricing/granularity=1h"
               - "--date"
               - "{{job.parameters.processing_date}}"
 
