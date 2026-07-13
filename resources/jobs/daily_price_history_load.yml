@@ -3,8 +3,6 @@ resources:
     price_history:
       name: ${var.env_name}_load_full_daily_price_history
       
-      max_concurrent_runs: 5
-
       queue:
         enabled: true
 
