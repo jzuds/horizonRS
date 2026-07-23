@@ -20,3 +20,10 @@ resources:
       schema_name: analytics
       volume_type: MANAGED
       comment: Analytics data
+
+    configuration_volume:
+      name: configuration
+      catalog_name: osrs_analytics_${var.env_name}
+      schema_name: analytics
+      volume_type: MANAGED
+      comment: Configuration data
