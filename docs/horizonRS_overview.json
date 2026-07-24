@@ -1,0 +1,164 @@
+{
+  "version": "31.0.2",
+  "pages": [
+    {
+      "id": "TQwUikudoXbnR8VZ48Gi",
+      "name": "Page-1",
+      "cells": [
+        {
+          "id": "1",
+          "type": "layer"
+        },
+        {
+          "id": "cO3s0GaoT-npZA7kVsBX-5",
+          "type": "node",
+          "parent": "1",
+          "label": "analytics",
+          "html": "analytics<br><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div>"
+        },
+        {
+          "id": "cO3s0GaoT-npZA7kVsBX-1",
+          "type": "node",
+          "parent": "1",
+          "label": "staging",
+          "html": "staging<br><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div>"
+        },
+        {
+          "id": "zd2p39DqhdzJwi6I1Sha-8",
+          "type": "edge",
+          "parent": "1",
+          "source": "zd2p39DqhdzJwi6I1Sha-6",
+          "target": "zd2p39DqhdzJwi6I1Sha-7"
+        },
+        {
+          "id": "cO3s0GaoT-npZA7kVsBX-3",
+          "type": "node",
+          "parent": "zd2p39DqhdzJwi6I1Sha-8",
+          "label": "api response"
+        },
+        {
+          "id": "zd2p39DqhdzJwi6I1Sha-6",
+          "type": "node",
+          "parent": "1",
+          "label": "prices.runescape.wiki/api/v1/osrs/",
+          "html": "prices.runescape.wiki/api/v1/osrs/<div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div><div><br></div>"
+        },
+        {
+          "id": "zd2p39DqhdzJwi6I1Sha-1",
+          "type": "node",
+          "parent": "1",
+          "label": "/24h"
+        },
+        {
+          "id": "zd2p39DqhdzJwi6I1Sha-2",
+          "type": "node",
+          "parent": "1",
+          "label": "/5m"
+        },
+        {
+          "id": "zd2p39DqhdzJwi6I1Sha-3",
+          "type": "node",
+          "parent": "1",
+          "label": "/1h"
+        },
+        {
+          "id": "zd2p39DqhdzJwi6I1Sha-4",
+          "type": "node",
+          "parent": "1",
+          "label": "/6h"
+        },
+        {
+          "id": "zd2p39DqhdzJwi6I1Sha-5",
+          "type": "node",
+          "parent": "1",
+          "label": "/mapping"
+        },
+        {
+          "id": "zd2p39DqhdzJwi6I1Sha-14",
+          "type": "edge",
+          "parent": "1",
+          "source": "zd2p39DqhdzJwi6I1Sha-7",
+          "target": "zd2p39DqhdzJwi6I1Sha-13"
+        },
+        {
+          "id": "cO3s0GaoT-npZA7kVsBX-2",
+          "type": "node",
+          "parent": "zd2p39DqhdzJwi6I1Sha-14",
+          "label": "schema declaration"
+        },
+        {
+          "id": "zd2p39DqhdzJwi6I1Sha-7",
+          "type": "node",
+          "parent": "1",
+          "label": "/stage/date=YYYY-MM-DD\n\t/<endpoint>\n\n\t\t/<timestamp>.json",
+          "html": "<div>/stage/<span style=\"background-color: transparent; color: light-dark(rgb(35, 47, 62), rgb(189, 199, 212));\">date=YYYY-MM-DD</span></div><div><span style=\"white-space: pre;\">\t</span>/&lt;endpoint&gt;<br></div><div><span style=\"white-space: pre;\">\t</span><span style=\"white-space: pre;\"><span style=\"white-space: pre;\">\t</span></span>/&lt;timestamp&gt;.json<br></div>"
+        },
+        {
+          "id": "cO3s0GaoT-npZA7kVsBX-14",
+          "type": "edge",
+          "parent": "1",
+          "source": "zd2p39DqhdzJwi6I1Sha-13",
+          "target": "cO3s0GaoT-npZA7kVsBX-10"
+        },
+        {
+          "id": "cO3s0GaoT-npZA7kVsBX-15",
+          "type": "node",
+          "parent": "cO3s0GaoT-npZA7kVsBX-14",
+          "label": "build metrics"
+        },
+        {
+          "id": "zd2p39DqhdzJwi6I1Sha-12",
+          "type": "node",
+          "parent": "1"
+        },
+        {
+          "id": "zd2p39DqhdzJwi6I1Sha-13",
+          "type": "node",
+          "parent": "1",
+          "label": "/processed/date=YYYY-MM-DD\n\t/<endpoint>\n\n\t\t/<timestamp>.parquet",
+          "html": "<div><div>/processed/<span style=\"background-color: transparent; color: light-dark(rgb(35, 47, 62), rgb(189, 199, 212));\">date=YYYY-MM-DD</span></div><div><span style=\"white-space: pre;\">\t</span>/&lt;endpoint&gt;<br></div><div><span style=\"white-space: pre;\">\t</span><span style=\"white-space: pre;\">\t</span>/&lt;timestamp&gt;.parquet</div></div>"
+        },
+        {
+          "id": "cO3s0GaoT-npZA7kVsBX-12",
+          "type": "edge",
+          "parent": "1",
+          "source": "cO3s0GaoT-npZA7kVsBX-10",
+          "target": "cO3s0GaoT-npZA7kVsBX-11"
+        },
+        {
+          "id": "cO3s0GaoT-npZA7kVsBX-13",
+          "type": "node",
+          "parent": "cO3s0GaoT-npZA7kVsBX-12",
+          "label": "data quality"
+        },
+        {
+          "id": "cO3s0GaoT-npZA7kVsBX-10",
+          "type": "node",
+          "parent": "1",
+          "label": "/stage/snapshot_date=YYYY-MM-DD\n\t\t/rolling_daily_changes.parquet\n\n\t\t/intra_day_metrics.parquet\n\t\t/daily_metrics.parquet",
+          "html": "<div>/stage/snapshot_<span style=\"background-color: transparent; color: light-dark(rgb(35, 47, 62), rgb(189, 199, 212));\">date=YYYY-MM-DD</span></div><div><span style=\"white-space: pre;\">\t</span><span style=\"white-space: pre;\"><span style=\"white-space: pre;\">\t</span></span>/rolling_daily_changes.parquet<br></div><div><span style=\"white-space: pre;\">\t</span><span style=\"white-space: pre;\">\t</span><span style=\"background-color: transparent; color: light-dark(rgb(35, 47, 62), rgb(189, 199, 212));\">/intra_day_metrics.parquet</span></div><div><span style=\"background-color: transparent; color: light-dark(rgb(35, 47, 62), rgb(189, 199, 212));\"><span style=\"white-space: pre;\">\t</span><span style=\"white-space: pre;\">\t</span>/daily_metrics.parquet</span></div>"
+        },
+        {
+          "id": "cO3s0GaoT-npZA7kVsBX-11",
+          "type": "node",
+          "parent": "1",
+          "label": "/processed/snapshot_date=YYYY-MM-DD\n\t\t/rolling_daily_changes.parquet\n\n\t\t/intra_day_metrics.parquet\n\t\t/daily_metrics.parquet",
+          "html": "<div>/processed/snapshot_<span style=\"background-color: transparent; color: light-dark(rgb(35, 47, 62), rgb(189, 199, 212));\">date=YYYY-MM-DD</span></div><div><span style=\"white-space: pre;\">\t</span><span style=\"white-space: pre;\"><span style=\"white-space: pre;\">\t</span></span>/rolling_daily_changes.parquet<br></div><div><span style=\"white-space: pre;\">\t</span><span style=\"white-space: pre;\">\t</span><span style=\"background-color: transparent; color: light-dark(rgb(35, 47, 62), rgb(189, 199, 212));\">/intra_day_metrics.parquet</span></div><div><span style=\"background-color: transparent; color: light-dark(rgb(35, 47, 62), rgb(189, 199, 212));\"><span style=\"white-space: pre;\">\t</span><span style=\"white-space: pre;\">\t</span>/daily_metrics.parquet</span></div>"
+        },
+        {
+          "id": "cO3s0GaoT-npZA7kVsBX-17",
+          "type": "edge",
+          "parent": "1",
+          "source": "cO3s0GaoT-npZA7kVsBX-11",
+          "target": "zd2p39DqhdzJwi6I1Sha-12"
+        },
+        {
+          "id": "cO3s0GaoT-npZA7kVsBX-18",
+          "type": "node",
+          "parent": "cO3s0GaoT-npZA7kVsBX-17",
+          "label": "send channel message"
+        }
+      ]
+    }
+  ]
+}
