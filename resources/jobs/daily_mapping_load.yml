@@ -1,0 +1,48 @@
+resources:
+  jobs:
+    daily_mapping_load:
+      name: ${var.env_name}_load_daily_item_mapping
+
+      parameters:
+        - name: processing_date
+          default: "{{job.start_time.iso_date}}"
+
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+
+      notification_settings:
+        no_alert_for_skipped_runs: false
+
+      schedule:
+        quartz_cron_expression: "0 0 12 * * ?"
+        timezone_id: UTC
+        pause_status: ${var.schedule_pause_status}
+
+      queue:
+        enabled: true
+
+      tasks:
+
+        # ----------------------------
+        # MAPPING EXTRACT
+        # ----------------------------
+        - task_key: item_mapping
+
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/extract/extract_mapping_data.py
+            parameters:
+              - "--landing-root"
+              - "/Volumes/osrs_analytics_${var.env_name}/stage/landing/mapping"
+
+
+          environment_key: Default
+
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "3"
+            dependencies:
+              - requests
+              - pandas
+              - pyarrow
