@@ -22,8 +22,12 @@ uv run python src/extract/stage_ge_price_data.py \
   --output-root ./output/stage \
   --date 2026-03-16
 
+uv run python src/extract/extract_mapping_data.py \
+  --landing-root ./output/mapping
+  
 uv run python src/utility/inspect_pq_file.py \
     --file ./output/stage/date=2026-03-16/timestamp=1773655200.parquet
+
 
 ```
 
